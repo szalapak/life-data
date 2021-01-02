@@ -20,7 +20,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 import sys
-from df2gspread import df2gspread as d2g
+#from df2gspread import df2gspread as d2g
 import scipy.stats as stats
 
 
@@ -31,10 +31,23 @@ categories_broad = ['sleep', 'High intensity work', 'Low intensity work',
              'Socialising', 'Other quality time', 'Travelling', 
               'Idle', 'High intensity exercise', 'Low intensity exercise']
 
-shortcuts_broad = ['^S', r'^WI.*', r'^WL.*',
+shortcuts_broad_old = ['^S', r'^WI.*', r'^WL.*',
             r'^H.?', r'^P.*', r'^C-.*',
              r'^Ch.*', r'^Q.*', r'^T.*', 
              r'^I.*', r'^ExI.*', r'^ExL.*']
+
+shortcuts_broad = ['.*S', 
+                   r'.*WI.*', 
+                   r'.*WL.*',
+                   r'.*H.?', 
+                   r'.*P.*', 
+                   r'.*C[ -]+|^C$|.* C$',
+                   r'.*Ch.*', 
+                   r'.*Q.*', 
+                   r'.*T.*', 
+                   r'^I .*|^I$|.* I$|.* I .*', 
+                   r'.*ExI.*', 
+                   r'.*ExL.*']
 
 categories_detail = ['sleep', 
                       'HI uni', 'HI self-improvement', 'HI organisation', 'HI admin', 'HI German',
@@ -43,12 +56,12 @@ categories_detail = ['sleep',
                       'Procrastination', 
                       'Culture - books', 'Culture - films', 'Culture - documentaries', 'Culture - TV', 
                      'Socialising', 
-                      'Quality - blogs', 'Quality - podcasts', 'Quality - news', 'Quality - wikipedia', 'Quality - games', 'Quality - YT', 'Quality - chill',
+                      'Quality - blogs', 'Quality - podcasts', 'Quality - news', 'Quality - games', 'Quality - YT', 'Quality - chill',
                       'Travelling', 
                       'Idle', 
                       'High intensity exercise', 'Low intensity exercise']
 
-shortcuts_detail = ['^S', 
+shortcuts_detail_old = ['^S', 
                      r'WI-U.*', r'WI-I.*', r'WI-O.*', r'WI-A.*', r'WI-Ger.*',
                      r'WL-U.*', r'WL-I.*', r'WL-O.*', r'WL-A.*', r'WL-Ger.*',
                      r'^H.?', 
@@ -60,6 +73,19 @@ shortcuts_detail = ['^S',
                      r'^I.*', 
                      r'^ExI.*', r'^ExL.*']
 
+shortcuts_detail = [r'.*S.*', 
+                     r'.*WI-u.*', r'.*WI-i.*', r'.*WI-o.*', r'.*WI-a.*', r'.*WI-ger.*',
+                     r'.*WL-u.*', r'.*WL-i.*', r'.*WL-o.*', r'.*WL-a.*', r'.*WL-ger.*',
+                     r'.*H.*', 
+                     r'.*P.*', 
+                     r'.*C-b.*', r'.*C-f.*', r'.*C-d.*', r'.*C-tv.*',
+                     r'^Ch.*', 
+                     r'.*Q-bl.*', r'.*Q-p.*', r'.*Q-n.*', r'Q-g.*', r'Q-yt.*',  r'Q-ch.*',
+                     r'.*T.*', 
+                     r'^I .*|^I$|.* I$|.* I .*', 
+                     r'.*ExI.*', 
+                     r'.*ExL.*']
+
 grades = [0,
           4, 4, 1, 1, 4,
           2, 2, 1, 1, 2,
@@ -67,7 +93,7 @@ grades = [0,
           -4, 
           3, 2, 1, 0,
           0, 
-          2, 2, 1, 2, 0, 0, 0,
+          2, 2, 1, 0, 0, 0,
           0, 
           0, 
           4, 1]
@@ -107,7 +133,7 @@ def load_data():
     #fix mood, add column with an average
     data['av_mood'] = data[['morning', 'afternoon', 'evening']].mean(axis = 1)
 
-    data['av_mood'][:17] = [6.0, 3.0, 3.0, 6.0, 5.0, 4.0, 5.0, 
+    data.av_mood.iloc[:17] = [6.0, 3.0, 3.0, 6.0, 5.0, 4.0, 5.0, 
                         3.0, 5.0, 6.0, 6.0, 4.0, 5.0, 5.0, 
                         5.0, 5.0, 4.0]
     
@@ -132,12 +158,7 @@ def make_summary(data, activities, categories, shortcuts):
     summary = pd.DataFrame(index = data['date'], columns = categories)
 
     for cat, short in zip(categories, shortcuts):
-        for i in range(len(data['date'])):
-            summary[cat].iloc[i] = activities.iloc[i].str.count(short).sum()*0.25
-
-
-    for column in summary.columns:
-        summary[column] = pd.to_numeric(summary[column])
+        summary[cat] =  activities.apply(lambda row : row.str.count(short).sum()*0.25, axis = 1)
     
     return(summary)
 
